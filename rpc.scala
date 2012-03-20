@@ -1,4 +1,5 @@
 import org.zeromq.ZMQ
+import org.zeromq.ZMQQueue
 import ZHelpers._
 object rpctest{
 class SendClient(ctx:ZMQ.Context,name:String) extends Runnable{
@@ -20,7 +21,7 @@ def run(){
 class Server(ctx:ZMQ.Context) extends Runnable{
 def run(){
 val socket=ctx.socket(ZMQ.DEALER)
-socket.bind("tcp://127.0.0.1:5555")
+socket.connect("tcp://127.0.0.1:5557")
 val responseSocket=ctx.socket(ZMQ.ROUTER)
 responseSocket.bind("tcp://127.0.0.1:5556")
 while(true){
@@ -62,5 +63,14 @@ val serverContext=ZMQ.context(1)
 new Thread(new Server(serverContext)).start
 new Thread(new ReceiveClient(clientContext,"A")).start
 new Thread(new ReceiveClient(clientContext,"B")).start
+
+val routerContext=ZMQ.context(1)
+val router=routerContext.socket(ZMQ.ROUTER)
+router.bind("tcp://127.0.0.1:5555")
+val dealer=routerContext.socket(ZMQ.DEALER)
+dealer.bind("tcp://127.0.0.1:5557")
+val queue=new ZMQQueue(routerContext,router,dealer)
+queue.run
+
 }
 }
